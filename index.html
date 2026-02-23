@@ -279,7 +279,13 @@
         const gameOverTitle = document.getElementById('gameOverTitle');
 
         function getComparison(varName, varVal) {
-            const ops = ['>', '<', '==', '!=', '>=', '<='];
+            let ops = ['>', '<', '==', '>=', '<='];
+            
+            // Introduce != starting at level 15
+            if (level >= 15) {
+                ops.push('!=');
+            }
+            
             const op = ops[Math.floor(Math.random() * ops.length)];
             const compareVal = varVal + Math.floor(Math.random() * 5) - 2; 
             let isTrue = false;
@@ -302,7 +308,13 @@
             if (mOp === '-') { mathResult = x - y; expString = "x - y"; }
             if (mOp === '*') { mathResult = x * y; expString = "x * y"; }
 
-            const compOps = ['>', '<', '==', '!=', '>=', '<='];
+            let compOps = ['>', '<', '==', '>=', '<='];
+            
+            // Introduce != starting at level 15 (though arithmetic only starts at 21)
+            if (level >= 15) {
+                compOps.push('!=');
+            }
+            
             const cOp = compOps[Math.floor(Math.random() * compOps.length)];
             const compareVal = mathResult + Math.floor(Math.random() * 11) - 5; 
 
