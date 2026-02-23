@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>True or False Logic Game</title>
+    <title>CS 10 - Logical Operators</title>
     <style>
         :root {
             --red: #e74c3c;
@@ -25,7 +25,8 @@
             margin: 0;
             user-select: none;
             overflow-x: hidden;
-            transition: background-color 0.2s ease-out; /* Smooth transition for flashes */
+            /* Lengthened transition for a smoother fade out of the flashes */
+            transition: background-color 0.4s ease-out; 
         }
 
         /* Screen shake animation for low time */
@@ -222,7 +223,7 @@
         <div class="timer-bar" id="timerBar"></div>
     </div>
 
-    <h1>True or False</h1>
+    <h1>CS 10 - Logical Operators</h1>
 
     <div class="variables-container" id="variablesContainer">
         x = ?
@@ -250,7 +251,7 @@
             <li>Evaluate the boolean expression shown below the variables.</li>
             <li>Click <strong>True</strong> or <strong>False</strong>.</li>
             <li><strong>Timer:</strong> Starting at Level 10, you have 30 seconds. The time drops slowly as you advance!</li>
-            <li><strong>Math:</strong> Starting at Level 15, be prepared for arithmetic (+, -, *) mixed into the logic!</li>
+            <li><strong>Math:</strong> Starting at Level 21, be prepared for arithmetic (+, -, *) mixed into the logic!</li>
         </ul>
     </div>
 
@@ -333,15 +334,15 @@
                 // Levels 6+: 'x' and 'y'
                 variablesContainer.textContent = `x = ${x}, y = ${y}`;
                 
-                if (level < 15) {
-                    // Levels 6-14: Standard logic
+                if (level <= 20) {
+                    // Levels 6-20: Standard logic
                     const comp1 = getComparison('x', x);
                     const comp2 = getComparison('y', y);
                     const logicalOp = Math.random() > 0.5 ? '&&' : '||';
                     expressionText = `${comp1.text} ${logicalOp} ${comp2.text}`;
                     expressionResult = logicalOp === '&&' ? (comp1.result && comp2.result) : (comp1.result || comp2.result);
                 } else {
-                    // Levels 15+: Arithmetic logic
+                    // Levels 21+: Arithmetic logic
                     const comp1 = Math.random() > 0.5 ? getArithmeticComparison(x, y) : getComparison('x', x);
                     const comp2 = Math.random() > 0.5 ? getArithmeticComparison(x, y) : getComparison('y', y);
                     const logicalOp = Math.random() > 0.5 ? '&&' : '||';
@@ -350,8 +351,8 @@
                 }
             }
 
-            // Introduce NOT (!) wrapper starting level 8 (only 40% chance so it isn't overwhelming)
-            if (level >= 8 && Math.random() > 0.6) {
+            // Introduce NOT (!) wrapper starting after level 15 (only 40% chance)
+            if (level > 15 && Math.random() > 0.6) {
                 expressionText = `!(${expressionText})`;
                 expressionResult = !expressionResult;
             }
@@ -364,11 +365,11 @@
             document.body.classList.remove('shake'); 
             
             if (playerGuess === expectedAnswer) {
-                // Green success flash (longer 400ms duration)
+                // Green success flash (longer 600ms duration)
                 document.body.classList.add('flash-success');
                 setTimeout(() => {
                     document.body.classList.remove('flash-success');
-                }, 400);
+                }, 600);
 
                 score += 1;
                 level += 1;
@@ -383,7 +384,7 @@
             clearInterval(timerInterval);
             document.body.classList.remove('shake'); 
             
-            // Timer now starts at level 10
+            // Timer starts at level 10
             if (level >= 10) {
                 timerContainer.style.display = 'block';
                 
@@ -423,11 +424,11 @@
             document.body.classList.remove('shake'); 
             document.body.classList.remove('flash-success'); 
             
-            // Red error flash on loss
+            // Red error flash on loss (longer 800ms duration)
             document.body.classList.add('flash-error');
             setTimeout(() => {
                 document.body.classList.remove('flash-error');
-            }, 500);
+            }, 800);
 
             gridElement.style.display = 'none';
             expressionContainer.style.display = 'none';
