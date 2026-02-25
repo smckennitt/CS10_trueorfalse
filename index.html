@@ -65,13 +65,6 @@
             align-items: flex-end;
         }
 
-        .high-score {
-            font-size: 0.85rem;
-            color: var(--muted);
-            font-weight: normal;
-            margin-top: 2px;
-        }
-
         /* Toggle Switch UI */
         .toggle-container {
             display: flex;
@@ -187,7 +180,7 @@
             align-items: center;
             justify-content: center;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 1.1rem;
+            font-size: 2rem;
             font-weight: bold;
             color: var(--text);
             text-align: center;
@@ -204,7 +197,7 @@
             background-color: #fff;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             cursor: pointer;
-            transition: filter 0.2s, transform 0.1s;
+            transition: filter 0.2s, transform 0.1s, box-shadow 0.2s;
         }
 
         .answer-box:active {
@@ -222,6 +215,33 @@
             position: relative;
         }
 
+        /* Scanning Animation */
+        .scanning {
+            position: relative;
+            overflow: hidden;
+            border: 2px solid var(--blue);
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .scanning::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: 0;
+            width: 100%;
+            height: 15px;
+            background: rgba(52, 152, 219, 0.6);
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.9);
+            animation: scan-sweep 1.2s ease-in-out;
+            z-index: 5;
+        }
+
+        @keyframes scan-sweep {
+            0% { top: -20%; }
+            50% { top: 100%; }
+            100% { top: -20%; }
+        }
+
         /* The Sprite */
         #sprite {
             position: absolute;
@@ -234,7 +254,7 @@
             font-size: 70px;
         }
 
-        .game-over-container {
+        .message-container {
             display: none;
             flex-direction: column;
             align-items: center;
@@ -245,6 +265,20 @@
             max-width: 400px;
             text-align: center;
             margin-top: -10px;
+        }
+
+        /* Victory Robot Dance */
+        @keyframes dance {
+            0%, 100% { transform: translateY(0) rotate(0); }
+            25% { transform: translateY(-15px) rotate(-15deg); }
+            50% { transform: translateY(0) rotate(0); }
+            75% { transform: translateY(-15px) rotate(15deg); }
+        }
+
+        .robot-dance {
+            font-size: 80px;
+            animation: dance 0.8s infinite;
+            margin: 15px 0;
         }
 
         .reset-btn {
@@ -278,10 +312,9 @@
 <body>
 
     <div class="header">
-        <div id="levelDisplay">lv.1</div>
+        <div id="levelDisplay">lv.1 / 5</div>
         <div class="scores-container">
             <div id="scoreDisplay">0pt</div>
-            <div id="highScoreDisplay" class="high-score">Best: 0pt</div>
             
             <div class="toggle-container">
                 <span class="toggle-label">Shake</span>
@@ -301,7 +334,7 @@
     <h1>CS 10 - Logic Sprite</h1>
 
     <div class="variables-container" id="variablesContainer">
-        x = ?
+        x == 'even'
     </div>
 
     <div class="grid-container" id="gridContainer">
@@ -322,9 +355,16 @@
         <div class="cell corner"></div>
     </div>
 
-    <div class="game-over-container" id="gameOverContainer">
+    <div class="message-container" id="gameOverContainer">
         <h2 style="color: var(--red); margin-top: 0;" id="gameOverTitle">Game Over!</h2>
         <p id="resultText"></p>
+        <button class="reset-btn" onclick="initGame()">Try Again</button>
+    </div>
+
+    <div class="message-container" id="victoryContainer">
+        <h2 style="color: var(--green); margin-top: 0;">System Overridden!</h2>
+        <div class="robot-dance">🤖</div>
+        <p>You successfully routed the logic sprite through all 5 levels.</p>
         <button class="reset-btn" onclick="initGame()">Play Again</button>
     </div>
 
@@ -332,21 +372,19 @@
         <h2>How to Play:</h2>
         <ul>
             <li>You are the <strong>Robot</strong> in the center.</li>
-            <li>Look at the variables (<strong>x</strong>, <strong>y</strong>).</li>
-            <li>Only <strong>ONE</strong> of the surrounding expressions is <strong>True</strong>.</li>
-            <li>Move to the correct square using <strong>Arrow Keys</strong>, <strong>W A S D</strong>, or clicking!</li>
-            <li>You have <strong>20 seconds</strong> per level!</li>
+            <li>Look at the prompt: <strong>x == 'even'</strong> or <strong>x == 'odd'</strong>.</li>
+            <li>Move to a square with a correct matching number. There may be more than one right answer!</li>
+            <li>The robot will halt and <strong>scan</strong> the square to verify your logic.</li>
+            <li>Complete <strong>5 levels</strong> to win!</li>
         </ul>
     </div>
 
     <script>
         let level = 1;
         let score = 0;
-        let correctDirection = "";
         let isMoving = false; 
         let gameActive = false;
-        
-        let highScore = localStorage.getItem('spriteLogicHighScore') || 0;
+        const MAX_LEVELS = 5;
         
         const shakeToggle = document.getElementById('shakeToggle');
         let shakeEnabled = localStorage.getItem('spriteLogicShake') !== 'false'; 
@@ -366,11 +404,11 @@
 
         const levelDisplay = document.getElementById('levelDisplay');
         const scoreDisplay = document.getElementById('scoreDisplay');
-        const highScoreDisplay = document.getElementById('highScoreDisplay');
         const timerBar = document.getElementById('timerBar');
         const variablesContainer = document.getElementById('variablesContainer');
         const gridContainer = document.getElementById('gridContainer');
         const gameOverContainer = document.getElementById('gameOverContainer');
+        const victoryContainer = document.getElementById('victoryContainer');
         const gameOverTitle = document.getElementById('gameOverTitle');
         const rulesBlock = document.getElementById('rulesBlock');
         const sprite = document.getElementById('sprite');
@@ -384,96 +422,37 @@
             if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') attemptMove('right');
         });
 
-        function getCondition(varName, varVal, wantTrue) {
-            let attempts = 0;
-            let ops = ['>', '<', '==', '>=', '<='];
-            if (level >= 15) ops.push('!=');
-
-            while(attempts < 50) {
-                let op = ops[Math.floor(Math.random() * ops.length)];
-                let compVal = varVal + Math.floor(Math.random() * 7) - 3;
-                let result = false;
-
-                if (op === '>') result = varVal > compVal;
-                if (op === '<') result = varVal < compVal;
-                if (op === '==') result = varVal === compVal;
-                if (op === '!=') result = varVal !== compVal;
-                if (op === '>=') result = varVal >= compVal;
-                if (op === '<=') result = varVal <= compVal;
-                
-                if (result === wantTrue) {
-                    return `${varName} ${op} ${compVal}`;
-                }
-                attempts++;
-            }
-            return wantTrue ? `${varName} == ${varVal}` : `${varName} != ${varVal}`;
-        }
-
-        function getCompoundCondition(x, y, wantTrue) {
-            const op = Math.random() > 0.5 ? '&&' : '||';
-            let c1True, c2True;
-
-            if (wantTrue) {
-                if (op === '&&') { c1True = true; c2True = true; }
-                else { 
-                    c1True = Math.random() > 0.5; 
-                    c2True = !c1True ? true : (Math.random() > 0.5); 
-                }
-            } else {
-                if (op === '&&') {
-                    c1True = Math.random() > 0.5;
-                    c2True = c1True ? false : (Math.random() > 0.5);
-                } else {
-                    c1True = false; c2True = false;
-                }
-            }
-            
-            let str1 = Math.random() > 0.5 ? getCondition('x', x, c1True) : getCondition('y', y, c1True);
-            let str2 = Math.random() > 0.5 ? getCondition('x', x, c2True) : getCondition('y', y, c2True);
-            
-            return `${str1} ${op} ${str2}`;
-        }
-
         function generateLevelLogic() {
-            const x = Math.floor(Math.random() * 10) + 1;
-            const y = Math.floor(Math.random() * 10) + 1;
+            // Determine if we are looking for even or odd
+            const isEvenTarget = Math.random() > 0.5;
+            variablesContainer.textContent = isEvenTarget ? "x == 'even'" : "x == 'odd'";
             
-            let trueExpr = "";
-            let false1 = "", false2 = "", false3 = "";
+            let options = [];
+            let hasCorrect = false;
 
-            if (level <= 5) {
-                variablesContainer.textContent = `x = ${x}`;
-                trueExpr = getCondition('x', x, true);
-                false1 = getCondition('x', x, false);
-                false2 = getCondition('x', x, false);
-                false3 = getCondition('x', x, false);
-            } else {
-                variablesContainer.textContent = `x = ${x}, y = ${y}`;
-                trueExpr = getCompoundCondition(x, y, true);
-                false1 = getCompoundCondition(x, y, false);
-                false2 = getCompoundCondition(x, y, false);
-                false3 = getCompoundCondition(x, y, false);
-
-                if (level > 15 && Math.random() > 0.6) {
-                    trueExpr = `!(${getCompoundCondition(x, y, false)})`;
-                }
+            // Generate 4 random numbers
+            for (let i = 0; i < 4; i++) {
+                let num = Math.floor(Math.random() * 99) + 1; // Numbers 1-99
+                let isCorrect = isEvenTarget ? (num % 2 === 0) : (num % 2 !== 0);
+                options.push({ val: num, isCorrect: isCorrect });
+                
+                if (isCorrect) hasCorrect = true;
             }
 
-            let options = [
-                { expr: trueExpr, isCorrect: true },
-                { expr: false1, isCorrect: false },
-                { expr: false2, isCorrect: false },
-                { expr: false3, isCorrect: false }
-            ];
+            // Guarantee at least one correct answer exists
+            if (!hasCorrect) {
+                let forceIndex = Math.floor(Math.random() * 4);
+                let num = options[forceIndex].val;
+                options[forceIndex].val = num + 1; // Swap odd/even
+                options[forceIndex].isCorrect = true;
+            }
 
+            // Shuffle layout
             options.sort(() => Math.random() - 0.5);
             const dirs = ['up', 'left', 'right', 'down'];
             
             for (let i = 0; i < 4; i++) {
-                document.getElementById(dirs[i] + 'Box').textContent = options[i].expr;
-                if (options[i].isCorrect) {
-                    correctDirection = dirs[i];
-                }
+                document.getElementById(dirs[i] + 'Box').textContent = options[i].val;
             }
         }
 
@@ -481,6 +460,7 @@
             if (!gameActive || isMoving) return;
             isMoving = true;
             document.body.classList.remove('shake');
+            clearInterval(timerInterval); // Pause timer during the scan
 
             const moveDist = '125px'; 
             
@@ -489,28 +469,45 @@
             if (direction === 'left') sprite.style.transform = `translateX(-${moveDist})`;
             if (direction === 'right') sprite.style.transform = `translateX(${moveDist})`;
 
+            // Wait for movement animation to finish before scanning
             setTimeout(() => {
                 evaluateAnswer(direction);
             }, 150); 
         }
 
         function evaluateAnswer(direction) {
-            sprite.style.transform = 'translate(0, 0)';
+            const chosenBox = document.getElementById(direction + 'Box');
+            chosenBox.classList.add('scanning');
 
-            if (direction === correctDirection) {
-                document.body.classList.add('flash-success');
-                setTimeout(() => document.body.classList.remove('flash-success'), 600);
+            // Wait for the scanning animation (1.2s) to complete
+            setTimeout(() => {
+                chosenBox.classList.remove('scanning');
+                sprite.style.transform = 'translate(0, 0)'; // Reset sprite position
 
-                score += 1;
-                level += 1;
-                scoreDisplay.textContent = `${score}pt`;
-                setTimeout(() => {
-                    isMoving = false;
-                    startLevel();
-                }, 50); 
-            } else {
-                gameOver("Wrong Move!");
-            }
+                const val = parseInt(chosenBox.textContent);
+                const isEvenTarget = variablesContainer.textContent.includes('even');
+                const isCorrect = isEvenTarget ? (val % 2 === 0) : (val % 2 !== 0);
+
+                if (isCorrect) {
+                    document.body.classList.add('flash-success');
+                    setTimeout(() => document.body.classList.remove('flash-success'), 600);
+
+                    score += 10; // 10 points per level
+                    level += 1;
+                    scoreDisplay.textContent = `${score}pt`;
+                    
+                    if (level > MAX_LEVELS) {
+                        showVictory();
+                    } else {
+                        setTimeout(() => {
+                            isMoving = false;
+                            startLevel();
+                        }, 50); 
+                    }
+                } else {
+                    gameOver("Incorrect Logic!");
+                }
+            }, 1200);
         }
 
         function startTimer() {
@@ -538,7 +535,7 @@
         }
 
         function startLevel() {
-            levelDisplay.textContent = `lv.${level}`;
+            levelDisplay.textContent = `lv.${level} / 5`;
             generateLevelLogic();
             startTimer();
         }
@@ -546,8 +543,7 @@
         function gameOver(reason) {
             gameActive = false;
             clearInterval(timerInterval);
-            document.body.classList.remove('shake'); 
-            document.body.classList.remove('flash-success'); 
+            document.body.classList.remove('shake', 'flash-success'); 
             
             document.body.classList.add('flash-error');
             setTimeout(() => document.body.classList.remove('flash-error'), 800);
@@ -558,22 +554,18 @@
             gameOverContainer.style.display = 'flex';
             
             gameOverTitle.textContent = reason;
-            
-            let isNewBest = false;
-            if (score > highScore) {
-                highScore = score;
-                localStorage.setItem('spriteLogicHighScore', highScore);
-                highScoreDisplay.textContent = `Best: ${highScore}pt`;
-                isNewBest = true;
-            }
-            
-            const percentile = Math.min(99, Math.max(10, Math.floor((score / 50) * 100) + Math.floor(Math.random() * 5)));
-            
-            if (isNewBest && score > 0) {
-                document.getElementById('resultText').innerHTML = `🎉 <strong>NEW HIGH SCORE!</strong> 🎉<br><br>Final Score: ${score} points (Level ${level})<br><br>You beat <strong>${percentile}%</strong> of all players.`;
-            } else {
-                document.getElementById('resultText').innerHTML = `You beat <strong>${percentile}%</strong> of all players.<br><br>Final Score: ${score} points (Level ${level})`;
-            }
+            document.getElementById('resultText').innerHTML = `You made it to Level ${level}.<br><br>Final Score: ${score} points`;
+        }
+
+        function showVictory() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            document.body.classList.remove('shake', 'flash-success', 'flash-error');
+
+            gridContainer.style.display = 'none';
+            variablesContainer.style.display = 'none';
+            rulesBlock.style.display = 'none';
+            victoryContainer.style.display = 'flex';
         }
 
         function initGame() {
@@ -587,12 +579,12 @@
             sprite.style.transform = 'translate(0, 0)';
             
             scoreDisplay.textContent = `${score}pt`;
-            highScoreDisplay.textContent = `Best: ${highScore}pt`;
             
             gridContainer.style.display = 'grid';
             variablesContainer.style.display = 'block';
             rulesBlock.style.display = 'block';
             gameOverContainer.style.display = 'none';
+            victoryContainer.style.display = 'none';
             
             startLevel();
         }
