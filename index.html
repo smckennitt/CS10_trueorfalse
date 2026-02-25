@@ -155,13 +155,15 @@
 
         .variables-container {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: bold;
-            color: var(--blue);
+            color: var(--text);
             margin-bottom: 20px;
             background: #e1f0fa;
             padding: 10px 20px;
             border-radius: 8px;
+            text-align: center;
+            min-width: 250px;
         }
 
         /* 3x3 Grid Setup */
@@ -180,9 +182,9 @@
             align-items: center;
             justify-content: center;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: bold;
-            color: var(--text);
+            color: #222f3e;
             text-align: center;
             padding: 5px;
             box-sizing: border-box;
@@ -194,10 +196,10 @@
         }
 
         .answer-box {
-            background-color: #fff;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background-color: #fff; /* Replaced dynamically via JS */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             cursor: pointer;
-            transition: filter 0.2s, transform 0.1s, box-shadow 0.2s;
+            transition: filter 0.2s, transform 0.1s;
         }
 
         .answer-box:active {
@@ -205,8 +207,7 @@
         }
 
         .answer-box:hover {
-            filter: brightness(0.95);
-            border: 2px solid var(--blue);
+            filter: brightness(1.15);
         }
 
         .center-box {
@@ -219,8 +220,7 @@
         .scanning {
             position: relative;
             overflow: hidden;
-            border: 2px solid var(--blue);
-            box-shadow: 0 0 15px rgba(52, 152, 219, 0.4);
+            border: 3px solid #fff;
         }
 
         .scanning::after {
@@ -229,9 +229,9 @@
             top: -50%;
             left: 0;
             width: 100%;
-            height: 15px;
-            background: rgba(52, 152, 219, 0.6);
-            box-shadow: 0 0 10px rgba(52, 152, 219, 0.9);
+            height: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 1);
             animation: scan-sweep 1.2s ease-in-out;
             z-index: 5;
         }
@@ -312,7 +312,7 @@
 <body>
 
     <div class="header">
-        <div id="levelDisplay">lv.1 / 5</div>
+        <div id="levelDisplay">lv.1 / 10</div>
         <div class="scores-container">
             <div id="scoreDisplay">0pt</div>
             
@@ -364,7 +364,7 @@
     <div class="message-container" id="victoryContainer">
         <h2 style="color: var(--green); margin-top: 0;">System Overridden!</h2>
         <div class="robot-dance">🤖</div>
-        <p>You successfully routed the logic sprite through all 5 levels.</p>
+        <p>You successfully evaluated the logic and survived all 10 levels.</p>
         <button class="reset-btn" onclick="initGame()">Play Again</button>
     </div>
 
@@ -372,10 +372,10 @@
         <h2>How to Play:</h2>
         <ul>
             <li>You are the <strong>Robot</strong> in the center.</li>
-            <li>Look at the prompt: <strong>x == 'even'</strong> or <strong>x == 'odd'</strong>.</li>
-            <li>Move to a square with a correct matching number. There may be more than one right answer!</li>
+            <li>Look at the prompt, which represents a chosen square ('x').</li>
+            <li>Move to a square where the statement evaluates to <strong>True</strong> based on its number and color.</li>
+            <li>Levels 6-10 use compound operators (<strong>&&</strong>, <strong>||</strong>, <strong>!</strong>).</li>
             <li>The robot will halt and <strong>scan</strong> the square to verify your logic.</li>
-            <li>Complete <strong>5 levels</strong> to win!</li>
         </ul>
     </div>
 
@@ -384,7 +384,15 @@
         let score = 0;
         let isMoving = false; 
         let gameActive = false;
-        const MAX_LEVELS = 5;
+        const MAX_LEVELS = 10;
+
+        const logicColors = ['red', 'blue', 'green', 'yellow'];
+        const colorHexMap = {
+            'red': '#ff7675',
+            'blue': '#74b9ff',
+            'green': '#55efc4',
+            'yellow': '#ffeaa7'
+        };
         
         const shakeToggle = document.getElementById('shakeToggle');
         let shakeEnabled = localStorage.getItem('spriteLogicShake') !== 'false'; 
@@ -422,37 +430,80 @@
             if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') attemptMove('right');
         });
 
+        function getSimpleCondition(boxObj, wantTrue) {
+            let isEven = boxObj.val % 2 === 0;
+            let checkParity = Math.random() > 0.5;
+
+            if (checkParity) {
+                let makeEven = wantTrue ? isEven : !isEven;
+                return makeEven ? "x == 'even'" : "x == 'odd'";
+            } else {
+                let c = boxObj.color;
+                if (!wantTrue) {
+                    let otherColors = logicColors.filter(col => col !== c);
+                    c = otherColors[Math.floor(Math.random() * otherColors.length)];
+                }
+                return `x == '${c} square'`;
+            }
+        }
+
         function generateLevelLogic() {
-            // Determine if we are looking for even or odd
-            const isEvenTarget = Math.random() > 0.5;
-            variablesContainer.textContent = isEvenTarget ? "x == 'even'" : "x == 'odd'";
-            
-            let options = [];
-            let hasCorrect = false;
+            // Generate 4 random boxes
+            let boxes = [];
+            for(let i=0; i<4; i++) {
+                boxes.push({
+                    val: Math.floor(Math.random() * 99) + 1,
+                    color: logicColors[Math.floor(Math.random() * logicColors.length)]
+                });
+            }
 
-            // Generate 4 random numbers
-            for (let i = 0; i < 4; i++) {
-                let num = Math.floor(Math.random() * 99) + 1; // Numbers 1-99
-                let isCorrect = isEvenTarget ? (num % 2 === 0) : (num % 2 !== 0);
-                options.push({ val: num, isCorrect: isCorrect });
+            // Guarantee at least one box is correct by anchoring the logic to it
+            let targetBox = boxes[Math.floor(Math.random() * 4)];
+            let logicString = "";
+
+            if (level <= 5) {
+                logicString = getSimpleCondition(targetBox, true);
+            } else {
+                // Compound logic for levels 6-10
+                let type = Math.floor(Math.random() * 3); // 0: AND, 1: OR, 2: NOT
                 
-                if (isCorrect) hasCorrect = true;
+                if (type === 0) {
+                    // && requires both to be true
+                    let cond1 = getSimpleCondition(targetBox, true);
+                    let cond2 = getSimpleCondition(targetBox, true);
+                    logicString = `${cond1} && ${cond2}`;
+                } else if (type === 1) {
+                    // || requires at least one to be true
+                    let cond1 = getSimpleCondition(targetBox, true);
+                    let cond2 = getSimpleCondition(targetBox, false); // Make one false to ensure they actually have to read it
+                    logicString = Math.random() > 0.5 ? `${cond1} || ${cond2}` : `${cond2} || ${cond1}`;
+                } else {
+                    // ! NOT operator
+                    let innerOp = Math.random() > 0.5 ? '&&' : '||';
+                    if (innerOp === '&&') {
+                        // !(True && False) evaluates to True
+                        let cond1 = getSimpleCondition(targetBox, true);
+                        let cond2 = getSimpleCondition(targetBox, false);
+                        let inner = Math.random() > 0.5 ? `${cond1} && ${cond2}` : `${cond2} && ${cond1}`;
+                        logicString = `!(${inner})`;
+                    } else {
+                        // !(False || False) evaluates to True
+                        let cond1 = getSimpleCondition(targetBox, false);
+                        let cond2 = getSimpleCondition(targetBox, false);
+                        logicString = `!(${cond1} || ${cond2})`;
+                    }
+                }
             }
 
-            // Guarantee at least one correct answer exists
-            if (!hasCorrect) {
-                let forceIndex = Math.floor(Math.random() * 4);
-                let num = options[forceIndex].val;
-                options[forceIndex].val = num + 1; // Swap odd/even
-                options[forceIndex].isCorrect = true;
-            }
+            variablesContainer.textContent = logicString;
 
-            // Shuffle layout
-            options.sort(() => Math.random() - 0.5);
+            // Apply to grid UI
             const dirs = ['up', 'left', 'right', 'down'];
-            
             for (let i = 0; i < 4; i++) {
-                document.getElementById(dirs[i] + 'Box').textContent = options[i].val;
+                let domBox = document.getElementById(dirs[i] + 'Box');
+                domBox.textContent = boxes[i].val;
+                domBox.style.backgroundColor = colorHexMap[boxes[i].color];
+                domBox.dataset.color = boxes[i].color; // Store for evaluation later
             }
         }
 
@@ -460,7 +511,7 @@
             if (!gameActive || isMoving) return;
             isMoving = true;
             document.body.classList.remove('shake');
-            clearInterval(timerInterval); // Pause timer during the scan
+            clearInterval(timerInterval); 
 
             const moveDist = '125px'; 
             
@@ -469,30 +520,43 @@
             if (direction === 'left') sprite.style.transform = `translateX(-${moveDist})`;
             if (direction === 'right') sprite.style.transform = `translateX(${moveDist})`;
 
-            // Wait for movement animation to finish before scanning
             setTimeout(() => {
                 evaluateAnswer(direction);
             }, 150); 
+        }
+
+        function checkLogicExpression(val, color, logicStr) {
+            // Safely map natural language conditions into JavaScript logical checks
+            let expr = logicStr
+                .replace(/x == 'even'/g, `(${val} % 2 === 0)`)
+                .replace(/x == 'odd'/g, `(${val} % 2 !== 0)`)
+                .replace(/x == 'red square'/g, `('${color}' === 'red')`)
+                .replace(/x == 'blue square'/g, `('${color}' === 'blue')`)
+                .replace(/x == 'green square'/g, `('${color}' === 'green')`)
+                .replace(/x == 'yellow square'/g, `('${color}' === 'yellow')`);
+            
+            return eval(expr);
         }
 
         function evaluateAnswer(direction) {
             const chosenBox = document.getElementById(direction + 'Box');
             chosenBox.classList.add('scanning');
 
-            // Wait for the scanning animation (1.2s) to complete
             setTimeout(() => {
                 chosenBox.classList.remove('scanning');
-                sprite.style.transform = 'translate(0, 0)'; // Reset sprite position
+                sprite.style.transform = 'translate(0, 0)'; 
 
                 const val = parseInt(chosenBox.textContent);
-                const isEvenTarget = variablesContainer.textContent.includes('even');
-                const isCorrect = isEvenTarget ? (val % 2 === 0) : (val % 2 !== 0);
+                const color = chosenBox.dataset.color;
+                const logicString = variablesContainer.textContent;
+                
+                const isCorrect = checkLogicExpression(val, color, logicString);
 
                 if (isCorrect) {
                     document.body.classList.add('flash-success');
                     setTimeout(() => document.body.classList.remove('flash-success'), 600);
 
-                    score += 10; // 10 points per level
+                    score += 10; 
                     level += 1;
                     scoreDisplay.textContent = `${score}pt`;
                     
@@ -535,7 +599,7 @@
         }
 
         function startLevel() {
-            levelDisplay.textContent = `lv.${level} / 5`;
+            levelDisplay.textContent = `lv.${level} / 10`;
             generateLevelLogic();
             startTimer();
         }
