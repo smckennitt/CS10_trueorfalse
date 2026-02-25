@@ -39,7 +39,15 @@
             transition: opacity 0.3s ease;
         }
         .intro-robot { font-size: 90px; animation: intro-bounce 0.4s infinite alternate; }
-        .intro-text { font-family: 'Courier New', Courier, monospace; font-size: 1.5rem; color: var(--blue); margin: 20px 0; font-weight: bold; }
+        .intro-text { 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 1.5rem; 
+            color: var(--blue); 
+            margin: 20px 0; 
+            font-weight: bold;
+            text-align: center;
+            padding: 0 20px;
+        }
         .intro-bar-container { width: 250px; height: 10px; background: #dfe4ea; border-radius: 5px; overflow: hidden; }
         .intro-bar { width: 0%; height: 100%; background: var(--blue); animation: intro-load 1.2s ease-out forwards; }
         
@@ -134,10 +142,26 @@
 
         .corner { visibility: hidden; }
 
-        .answer-box { background-color: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; transition: filter 0.2s, transform 0.1s; }
+        .answer-box { background-color: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.2s, transform 0.1s; border: 4px solid transparent; }
         .answer-box:active { transform: scale(0.95); }
         .answer-box:hover { filter: brightness(1.15); }
         .center-box { background-color: #e1f0fa; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); position: relative; }
+
+        /* Correct Answer Highlight for Game Over */
+        @keyframes pulse-highlight {
+            0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+        }
+
+        .highlight-correct {
+            border: 5px solid var(--green) !important;
+            box-shadow: 0 0 15px var(--green) !important;
+            transform: scale(1.05);
+            z-index: 10;
+            animation: pulse-highlight 1.5s infinite;
+            opacity: 1 !important;
+        }
 
         /* Scanning Animation */
         .scanning { position: relative; overflow: hidden; border: 3px solid #fff; }
@@ -203,7 +227,7 @@
 
     <div id="introScreen" class="intro-screen">
         <div class="intro-robot">🤖</div>
-        <div class="intro-text">INITIALIZING LOGIC...</div>
+        <div class="intro-text">CS 10 McKennitt - Loading Logic....</div>
         <div class="intro-bar-container"><div class="intro-bar"></div></div>
     </div>
 
@@ -482,6 +506,11 @@
                 domBox.textContent = boxes[i].val;
                 domBox.style.backgroundColor = colorHexMap[boxes[i].color];
                 domBox.dataset.color = boxes[i].color;
+                
+                // Reset any styling applied from previous game over
+                domBox.style.opacity = '1';
+                domBox.style.transform = '';
+                domBox.classList.remove('highlight-correct');
             }
         }
 
@@ -599,10 +628,26 @@
             document.body.classList.add('flash-error');
             setTimeout(() => document.body.classList.remove('flash-error'), 800);
 
-            gridContainer.style.display = 'none';
-            variablesContainer.style.display = 'none';
+            // Hide rules, but keep grid and variables visible
             rulesBlock.style.display = 'none';
             gameOverContainer.style.display = 'flex';
+            
+            // Highlight Correct Answer & Dim Incorrect ones
+            const dirs = ['up', 'left', 'right', 'down'];
+            const logicString = variablesContainer.textContent;
+            
+            for (let i = 0; i < 4; i++) {
+                let box = document.getElementById(dirs[i] + 'Box');
+                let val = parseInt(box.textContent);
+                let color = box.dataset.color;
+                
+                if (checkLogicExpression(val, color, logicString)) {
+                    box.classList.add('highlight-correct');
+                } else {
+                    box.style.opacity = '0.35';
+                    box.style.transform = 'scale(0.95)';
+                }
+            }
             
             gameOverTitle.textContent = reason;
             document.getElementById('resultText').innerHTML = `You made it to Level ${level}.<br><br>Final Score: ${score} points`;
@@ -669,6 +714,7 @@
             
             startLevel();
         }
+
     </script>
 </body>
 </html>
