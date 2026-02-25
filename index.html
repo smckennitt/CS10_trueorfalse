@@ -31,6 +31,21 @@
             min-height: 100vh;
         }
 
+        /* Intro Screen */
+        .intro-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--bg); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+        .intro-robot { font-size: 90px; animation: intro-bounce 0.4s infinite alternate; }
+        .intro-text { font-family: 'Courier New', Courier, monospace; font-size: 1.5rem; color: var(--blue); margin: 20px 0; font-weight: bold; }
+        .intro-bar-container { width: 250px; height: 10px; background: #dfe4ea; border-radius: 5px; overflow: hidden; }
+        .intro-bar { width: 0%; height: 100%; background: var(--blue); animation: intro-load 1.2s ease-out forwards; }
+        
+        @keyframes intro-bounce { from { transform: translateY(0); } to { transform: translateY(-25px); } }
+        @keyframes intro-load { to { width: 100%; } }
+
         /* Screen shake animation */
         @keyframes panic-shake {
             0% { transform: translate(0, 0); }
@@ -58,21 +73,9 @@
             80% { background-color: #d4fc79; }
             100% { background-color: #ff9a9e; }
         }
-        .victory-mode {
-            animation: rainbow-bg 3s infinite linear !important;
-        }
+        .victory-mode { animation: rainbow-bg 3s infinite linear !important; }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            width: 100%;
-            max-width: 400px;
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
+        .header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 400px; margin-bottom: 10px; font-size: 1.2rem; font-weight: bold; }
         .scores-container { display: flex; flex-direction: column; align-items: flex-end; }
 
         /* Toggle Switch UI */
@@ -94,7 +97,7 @@
 
         .variables-container {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 1.15rem;
+            font-size: 1rem;
             font-weight: bold;
             color: var(--text);
             margin-bottom: 20px;
@@ -103,54 +106,35 @@
             border-radius: 8px;
             text-align: center;
             min-width: 250px;
+            max-width: 500px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            word-wrap: break-word;
         }
 
         .mode-badge {
-            display: inline-block;
-            font-size: 0.8rem;
-            padding: 2px 8px;
-            border-radius: 12px;
-            color: white;
-            margin-left: 10px;
-            vertical-align: middle;
+            display: inline-block; font-size: 0.8rem; padding: 2px 8px;
+            border-radius: 12px; color: white; margin-left: 10px; vertical-align: middle;
         }
         .mode-easy { background-color: var(--green); }
         .mode-hard { background-color: var(--red); box-shadow: 0 0 8px var(--red); }
+        .mode-extreme { background-color: #8e44ad; box-shadow: 0 0 8px #8e44ad; }
 
         /* 3x3 Grid Setup */
         .grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, var(--cell-size));
-            grid-template-rows: repeat(3, var(--cell-size));
-            gap: var(--cell-gap);
-            margin-bottom: 30px;
-            position: relative;
+            display: grid; grid-template-columns: repeat(3, var(--cell-size));
+            grid-template-rows: repeat(3, var(--cell-size)); gap: var(--cell-gap);
+            margin-bottom: 30px; position: relative;
         }
 
         .cell {
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #222f3e;
-            text-align: center;
-            padding: 5px;
-            box-sizing: border-box;
-            word-wrap: break-word;
+            border-radius: 15px; display: flex; align-items: center; justify-content: center;
+            font-family: 'Courier New', Courier, monospace; font-size: 2.5rem; font-weight: bold;
+            color: #222f3e; text-align: center; padding: 5px; box-sizing: border-box; word-wrap: break-word;
         }
 
         .corner { visibility: hidden; }
 
-        .answer-box {
-            background-color: #fff;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            cursor: pointer;
-            transition: filter 0.2s, transform 0.1s;
-        }
+        .answer-box { background-color: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.2); cursor: pointer; transition: filter 0.2s, transform 0.1s; }
         .answer-box:active { transform: scale(0.95); }
         .answer-box:hover { filter: brightness(1.15); }
         .center-box { background-color: #e1f0fa; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); position: relative; }
@@ -162,9 +146,7 @@
             background: rgba(255, 255, 255, 0.9); box-shadow: 0 0 15px rgba(255, 255, 255, 1);
             animation: scan-sweep 1.2s ease-in-out; z-index: 5;
         }
-        @keyframes scan-sweep {
-            0% { top: -20%; } 50% { top: 100%; } 100% { top: -20%; }
-        }
+        @keyframes scan-sweep { 0% { top: -20%; } 50% { top: 100%; } 100% { top: -20%; } }
 
         /* The Sprite & Death Animations */
         #sprite {
@@ -172,10 +154,8 @@
             pointer-events: none; display: flex; align-items: center; justify-content: center;
             width: 70px; height: 70px;
         }
-        
         .robot-emoji { font-size: 70px; line-height: 1; transition: all 0.5s; }
         
-        /* 1. Explode */
         .death-explode .robot-emoji { animation: anim-explode 0.8s forwards; }
         @keyframes anim-explode {
             0% { transform: scale(1); filter: brightness(1); }
@@ -183,14 +163,12 @@
             100% { transform: scale(3.5); opacity: 0; }
         }
 
-        /* 2. Deflate/Shrink */
         .death-deflate .robot-emoji { animation: anim-deflate 1s forwards; }
         @keyframes anim-deflate {
             0% { transform: scale(1) rotate(0); }
             100% { transform: scale(0) rotate(1080deg); opacity: 0; }
         }
 
-        /* 3. Slice */
         .slice-half { position: absolute; top: 0; left: 0; font-size: 70px; line-height: 1; transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
         .slice-left { clip-path: polygon(0 0, 50% 0, 40% 100%, 0 100%); }
         .slice-right { clip-path: polygon(50% 0, 100% 0, 100% 100%, 40% 100%); }
@@ -222,6 +200,12 @@
     </style>
 </head>
 <body>
+
+    <div id="introScreen" class="intro-screen">
+        <div class="intro-robot">🤖</div>
+        <div class="intro-text">INITIALIZING LOGIC...</div>
+        <div class="intro-bar-container"><div class="intro-bar"></div></div>
+    </div>
 
     <div class="header">
         <div id="levelDisplay">lv.1 / 20 <span class="mode-badge mode-easy" id="modeBadge">EASY</span></div>
@@ -282,10 +266,10 @@
         <ul>
             <li>Move the <strong>Robot</strong> to the square that makes the statement <strong>True</strong>.</li>
             <li><strong>Exactly ONE square</strong> will be the correct answer every time.</li>
-            <li>Levels 1-10 (Easy): Numbers under 20. Simple logic.</li>
-            <li>Levels 11-20 (Hard): Numbers up to 99. Compound logic (&&, ||, !).</li>
+            <li>Levels 1-2: Single condition. Very Easy.</li>
+            <li>Levels 3-15: Increasing complexity with multiple operators.</li>
+            <li>Levels 16-20 (Extreme): Dense logic. Brace yourself.</li>
             <li><strong>Checkpoint:</strong> Reach Level 11, and you can respawn there if you fail!</li>
-            <li><strong>Watch out:</strong> The final 5 levels give you less time!</li>
         </ul>
     </div>
 
@@ -327,6 +311,18 @@
         const rulesBlock = document.getElementById('rulesBlock');
         const sprite = document.getElementById('sprite');
         const checkpointBtn = document.getElementById('checkpointBtn');
+        const introScreen = document.getElementById('introScreen');
+
+        // Initial Loading Sequence
+        window.onload = () => {
+            setTimeout(() => {
+                introScreen.style.opacity = '0';
+                setTimeout(() => {
+                    introScreen.style.display = 'none';
+                    initGame(1);
+                }, 300);
+            }, 1800);
+        };
 
         document.addEventListener('keydown', (e) => {
             if (!gameActive || isMoving) return;
@@ -340,6 +336,9 @@
 
         function getBaseConditionText() {
             const opts = ["x == 'even'", "x == 'odd'", "x == 'red square'", "x == 'blue square'", "x == 'green square'", "x == 'yellow square'"];
+            if (level >= 16) {
+                opts.push("x > 50", "x < 50");
+            }
             return opts[Math.floor(Math.random() * opts.length)];
         }
 
@@ -350,54 +349,55 @@
                 .replace(/x == 'red square'/g, `('${color}' === 'red')`)
                 .replace(/x == 'blue square'/g, `('${color}' === 'blue')`)
                 .replace(/x == 'green square'/g, `('${color}' === 'green')`)
-                .replace(/x == 'yellow square'/g, `('${color}' === 'yellow')`);
+                .replace(/x == 'yellow square'/g, `('${color}' === 'yellow')`)
+                .replace(/x > 50/g, `(${val} > 50)`)
+                .replace(/x < 50/g, `(${val} < 50)`);
             try { return eval(expr); } catch (e) { return false; }
         }
 
         function buildExpressionTree(numConds, allowNot) {
+            const maybeNot = (exp) => (allowNot && Math.random() > 0.6) ? `!(${exp})` : exp;
+            const op = () => {
+                let chance = level >= 16 ? 0.2 : 0.5; // High && bias in late game
+                return Math.random() > chance ? '&&' : '||';
+            };
+
             if (numConds === 1) {
                 return getBaseConditionText();
             } else if (numConds === 2) {
-                let c1 = getBaseConditionText();
-                let c2 = getBaseConditionText();
-                let op;
-                
-                if (level >= 17) {
-                    // Heavily favor && operators for final levels (80% chance)
-                    op = Math.random() > 0.2 ? '&&' : '||'; 
-                } else {
-                    op = Math.random() > 0.5 ? '&&' : '||';
-                }
-
-                let exp = `${c1} ${op} ${c2}`;
-                if (allowNot && Math.random() > 0.5) return `!(${exp})`;
-                return exp;
+                return maybeNot(`${getBaseConditionText()} ${op()} ${getBaseConditionText()}`);
+            } else if (numConds === 3) {
+                let inner = maybeNot(`${getBaseConditionText()} ${op()} ${getBaseConditionText()}`);
+                let exp = Math.random() > 0.5 
+                    ? `${inner} ${op()} ${getBaseConditionText()}` 
+                    : `${getBaseConditionText()} ${op()} ${inner}`;
+                return maybeNot(exp);
+            } else {
+                let inner1 = maybeNot(`${getBaseConditionText()} ${op()} ${getBaseConditionText()}`);
+                let inner2 = maybeNot(`${getBaseConditionText()} ${op()} ${getBaseConditionText()}`);
+                return maybeNot(`${inner1} ${op()} ${inner2}`);
             }
         }
 
         function generateRandomExpression(targetBox) {
             let numConds = 1;
-            // Cap at 2 conditions instead of 3
-            if (level >= 4) numConds = 2; 
+            // Diff Curve: Lvl 1-2 (1 cond), Lvl 3-6 (2 conds), Lvl 7-15 (3 conds), Lvl 16-20 (4 conds)
+            if (level >= 3 && level <= 6) numConds = 2;
+            else if (level >= 7 && level <= 15) numConds = 3;
+            else if (level >= 16) numConds = 4;
             
-            let allowNot = level >= 12;
+            let allowNot = level >= 7;
             let attempts = 0;
 
-            while(attempts < 2000) {
+            while(attempts < 1000) {
                 let expr = buildExpressionTree(numConds, allowNot);
-                // Target must evaluate to true
                 if (checkLogicExpression(targetBox.val, targetBox.color, expr)) {
-                    // Check for duplicate redundant texts 
-                    let parts = expr.match(/x == '[^']+'/g) || [];
+                    let parts = expr.match(/x == '[^']+'|x [><] 50/g) || [];
                     let uniqueParts = new Set(parts);
-                    
-                    if (parts.length === uniqueParts.size) {
-                         return expr;
-                    }
+                    if (parts.length === uniqueParts.size) return expr;
                 }
                 attempts++;
             }
-            // Safe fallback
             return targetBox.val % 2 === 0 ? "x == 'even'" : "x == 'odd'";
         }
 
@@ -407,55 +407,50 @@
                 modeBadge.textContent = "EASY";
                 modeBadge.className = "mode-badge mode-easy";
                 currentTimerMax = 20;
-            } else {
+            } else if (level <= 15) {
                 modeBadge.textContent = "HARD";
                 modeBadge.className = "mode-badge mode-hard";
-                currentTimerMax = (level >= 16) ? 15 : 20; // Faster for last 5
+                currentTimerMax = 20;
+            } else {
+                modeBadge.textContent = "EXTREME";
+                modeBadge.className = "mode-badge mode-extreme";
+                currentTimerMax = 15;
             }
 
             let maxNum = level <= 10 ? 20 : 99;
-            let boxes, targetBox, logicString;
-            let validLevelFound = false;
-            let masterAttempts = 0;
+            let boxes = [];
+            
+            // 1. Generate Target Box
+            let targetBox = {
+                val: Math.floor(Math.random() * maxNum) + 1,
+                color: logicColors[Math.floor(Math.random() * logicColors.length)]
+            };
+            
+            // 2. Build Complex Expression for Target Box
+            let logicString = generateRandomExpression(targetBox);
+            boxes.push(targetBox);
 
-            // Generate until we find a combination where EXACTLY ONE box is True
-            while (!validLevelFound && masterAttempts < 500) {
-                masterAttempts++;
-                boxes = [];
-                for(let i=0; i<4; i++) {
-                    boxes.push({
+            // 3. Generate 3 Fake Boxes guaranteed to evaluate to False
+            for (let i = 0; i < 3; i++) {
+                let fakeBox;
+                let failSafe = 0;
+                do {
+                    fakeBox = {
                         val: Math.floor(Math.random() * maxNum) + 1,
                         color: logicColors[Math.floor(Math.random() * logicColors.length)]
-                    });
-                }
-
-                targetBox = boxes[Math.floor(Math.random() * 4)];
-                logicString = generateRandomExpression(targetBox);
-
-                // Count how many boxes are true based on the generated logic
-                let trueCount = 0;
-                for (let i = 0; i < 4; i++) {
-                    if (checkLogicExpression(boxes[i].val, boxes[i].color, logicString)) {
-                        trueCount++;
-                    }
-                }
-
-                if (trueCount === 1) {
-                    validLevelFound = true;
-                }
+                    };
+                    failSafe++;
+                } while (checkLogicExpression(fakeBox.val, fakeBox.color, logicString) && failSafe < 150);
+                
+                boxes.push(fakeBox);
             }
 
-            // Absolute fallback if no unique combination is generated
-            if (!validLevelFound) {
-                logicString = targetBox.val % 2 === 0 ? "x == 'even'" : "x == 'odd'";
-                for (let i = 0; i < 4; i++) {
-                    if (boxes[i] !== targetBox) {
-                        boxes[i].val = (targetBox.val % 2 === 0) ? 3 : 2; 
-                    }
-                }
-            }
+            // Shuffle them
+            boxes.sort(() => Math.random() - 0.5);
 
             variablesContainer.textContent = logicString;
+            // Adjust text size dynamically based on formula length
+            variablesContainer.style.fontSize = logicString.length > 55 ? '0.85rem' : '1rem';
 
             // Apply to UI
             const dirs = ['up', 'left', 'right', 'down'];
@@ -540,13 +535,11 @@
             
             if (choice === 'slice') {
                 sprite.innerHTML = `<div class="slice-half slice-left">🤖</div><div class="slice-half slice-right">🤖</div>`;
-                // Add tiny delay for browser rendering to catch DOM change
                 setTimeout(() => sprite.classList.add('death-slice'), 30);
             } else {
                 sprite.classList.add(`death-${choice}`);
             }
 
-            // Wait for animation to finish before showing Game Over modal
             setTimeout(() => gameOver(reason), 1200);
         }
 
@@ -572,7 +565,9 @@
         }
 
         function startLevel() {
-            levelDisplay.innerHTML = `lv.${level} / 20 <span class="mode-badge ${level <= 10 ? 'mode-easy' : 'mode-hard'}" id="modeBadge">${level <= 10 ? 'EASY' : 'HARD'}</span>`;
+            let bClass = level <= 10 ? 'mode-easy' : (level <= 15 ? 'mode-hard' : 'mode-extreme');
+            let bText = level <= 10 ? 'EASY' : (level <= 15 ? 'HARD' : 'EXTREME');
+            levelDisplay.innerHTML = `lv.${level} / 20 <span class="mode-badge ${bClass}" id="modeBadge">${bText}</span>`;
             generateLevelLogic();
             startTimer();
         }
@@ -631,15 +626,12 @@
             isMoving = false;
             gameActive = true;
             
-            // Clean up DOM states from death/victory
             clearInterval(timerInterval);
             document.body.className = ''; 
             if (shakeEnabled) shakeToggle.checked = true;
             
-            // Remove confetti if any
             document.querySelectorAll('.confetti-piece').forEach(e => e.remove());
 
-            // Reset Sprite
             sprite.innerHTML = '<div class="robot-emoji">🤖</div>';
             sprite.className = '';
             sprite.style.transform = 'translate(0, 0)';
@@ -655,7 +647,7 @@
             startLevel();
         }
 
-        initGame(1);
+        // Initialization now waits for the intro screen to finish!
     </script>
 </body>
 </html>
