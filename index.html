@@ -281,6 +281,7 @@
         <h2>How to Play:</h2>
         <ul>
             <li>Move the <strong>Robot</strong> to the square that makes the statement <strong>True</strong>.</li>
+            <li><strong>Exactly ONE square</strong> will be the correct answer every time.</li>
             <li>Levels 1-10 (Easy): Numbers under 20. Simple logic.</li>
             <li>Levels 11-20 (Hard): Numbers up to 99. Compound logic (&&, ||, !).</li>
             <li><strong>Checkpoint:</strong> Reach Level 11, and you can respawn there if you fail!</li>
@@ -359,26 +360,25 @@
             } else if (numConds === 2) {
                 let c1 = getBaseConditionText();
                 let c2 = getBaseConditionText();
-                let op = Math.random() > 0.5 ? '&&' : '||';
+                let op;
+                
+                if (level >= 17) {
+                    // Heavily favor && operators for final levels (80% chance)
+                    op = Math.random() > 0.2 ? '&&' : '||'; 
+                } else {
+                    op = Math.random() > 0.5 ? '&&' : '||';
+                }
+
                 let exp = `${c1} ${op} ${c2}`;
                 if (allowNot && Math.random() > 0.5) return `!(${exp})`;
-                return exp;
-            } else if (numConds === 3) {
-                let c1 = getBaseConditionText();
-                let c2 = getBaseConditionText();
-                let c3 = getBaseConditionText();
-                let op1 = Math.random() > 0.5 ? '&&' : '||';
-                let op2 = Math.random() > 0.5 ? '&&' : '||';
-                let exp = Math.random() > 0.5 ? `(${c1} ${op1} ${c2}) ${op2} ${c3}` : `${c1} ${op1} (${c2} ${op2} ${c3})`;
-                if (allowNot && Math.random() > 0.4) return `!(${exp})`;
                 return exp;
             }
         }
 
         function generateRandomExpression(targetBox) {
             let numConds = 1;
-            if (level >= 4 && level <= 15) numConds = 2;
-            if (level >= 16) numConds = 3;
+            // Cap at 2 conditions instead of 3
+            if (level >= 4) numConds = 2; 
             
             let allowNot = level >= 12;
             let attempts = 0;
@@ -387,7 +387,7 @@
                 let expr = buildExpressionTree(numConds, allowNot);
                 // Target must evaluate to true
                 if (checkLogicExpression(targetBox.val, targetBox.color, expr)) {
-                    // Check for duplicate redundant texts (e.g. x == 'even' && x == 'even')
+                    // Check for duplicate redundant texts 
                     let parts = expr.match(/x == '[^']+'/g) || [];
                     let uniqueParts = new Set(parts);
                     
@@ -397,7 +397,7 @@
                 }
                 attempts++;
             }
-            // Safe fallback just in case
+            // Safe fallback
             return targetBox.val % 2 === 0 ? "x == 'even'" : "x == 'odd'";
         }
 
@@ -413,19 +413,48 @@
                 currentTimerMax = (level >= 16) ? 15 : 20; // Faster for last 5
             }
 
-            // Generate Boxes
             let maxNum = level <= 10 ? 20 : 99;
-            let boxes = [];
-            for(let i=0; i<4; i++) {
-                boxes.push({
-                    val: Math.floor(Math.random() * maxNum) + 1,
-                    color: logicColors[Math.floor(Math.random() * logicColors.length)]
-                });
+            let boxes, targetBox, logicString;
+            let validLevelFound = false;
+            let masterAttempts = 0;
+
+            // Generate until we find a combination where EXACTLY ONE box is True
+            while (!validLevelFound && masterAttempts < 500) {
+                masterAttempts++;
+                boxes = [];
+                for(let i=0; i<4; i++) {
+                    boxes.push({
+                        val: Math.floor(Math.random() * maxNum) + 1,
+                        color: logicColors[Math.floor(Math.random() * logicColors.length)]
+                    });
+                }
+
+                targetBox = boxes[Math.floor(Math.random() * 4)];
+                logicString = generateRandomExpression(targetBox);
+
+                // Count how many boxes are true based on the generated logic
+                let trueCount = 0;
+                for (let i = 0; i < 4; i++) {
+                    if (checkLogicExpression(boxes[i].val, boxes[i].color, logicString)) {
+                        trueCount++;
+                    }
+                }
+
+                if (trueCount === 1) {
+                    validLevelFound = true;
+                }
             }
 
-            // Pick a guaranteed target and build string
-            let targetBox = boxes[Math.floor(Math.random() * 4)];
-            let logicString = generateRandomExpression(targetBox);
+            // Absolute fallback if no unique combination is generated
+            if (!validLevelFound) {
+                logicString = targetBox.val % 2 === 0 ? "x == 'even'" : "x == 'odd'";
+                for (let i = 0; i < 4; i++) {
+                    if (boxes[i] !== targetBox) {
+                        boxes[i].val = (targetBox.val % 2 === 0) ? 3 : 2; 
+                    }
+                }
+            }
+
             variablesContainer.textContent = logicString;
 
             // Apply to UI
@@ -598,7 +627,7 @@
 
         function initGame(startLv = 1) {
             level = startLv;
-            score = (startLv === 11) ? 100 : 0; // Give 100 base score if starting at Checkpoint
+            score = (startLv === 11) ? 100 : 0; 
             isMoving = false;
             gameActive = true;
             
