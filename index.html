@@ -267,8 +267,8 @@
             <li>Move the <strong>Robot</strong> to the square that makes the statement <strong>True</strong>.</li>
             <li><strong>Exactly ONE square</strong> will be the correct answer every time.</li>
             <li>Levels 1-2: Single condition. Very Easy.</li>
-            <li>Levels 3-15: Increasing complexity with multiple operators.</li>
-            <li>Levels 16-20 (Extreme): Dense logic. Brace yourself.</li>
+            <li>Levels 3-17: Two conditions. Watch out for tricky colors!</li>
+            <li>Levels 18-20 (Extreme): Three conditions. Dense logic. Brace yourself.</li>
             <li><strong>Checkpoint:</strong> Reach Level 11, and you can respawn there if you fail!</li>
         </ul>
     </div>
@@ -355,12 +355,21 @@
             try { return eval(expr); } catch (e) { return false; }
         }
 
+        // Prevents generating tautologies or contradictions
+        function hasContradictionOrTautology(expr) {
+            if (expr.includes("'even'") && expr.includes("'odd'")) return true;
+            if (expr.includes("> 50") && expr.includes("< 50")) return true;
+            // Impossible combinations like red && blue
+            let colorsInExpr = logicColors.filter(c => expr.includes(`'${c} square'`));
+            if (colorsInExpr.length > 1 && expr.includes("&&")) return true;
+            return false;
+        }
+
         function buildExpressionTree(numConds, allowNot) {
             const maybeNot = (exp) => (allowNot && Math.random() > 0.6) ? `!(${exp})` : exp;
-            const op = () => {
-                let chance = level >= 16 ? 0.2 : 0.5; // High && bias in late game
-                return Math.random() > chance ? '&&' : '||';
-            };
+            
+            // Bias heavily towards && operators 
+            const op = () => Math.random() > 0.25 ? '&&' : '||';
 
             if (numConds === 1) {
                 return getBaseConditionText();
@@ -372,25 +381,26 @@
                     ? `${inner} ${op()} ${getBaseConditionText()}` 
                     : `${getBaseConditionText()} ${op()} ${inner}`;
                 return maybeNot(exp);
-            } else {
-                let inner1 = maybeNot(`${getBaseConditionText()} ${op()} ${getBaseConditionText()}`);
-                let inner2 = maybeNot(`${getBaseConditionText()} ${op()} ${getBaseConditionText()}`);
-                return maybeNot(`${inner1} ${op()} ${inner2}`);
             }
         }
 
         function generateRandomExpression(targetBox) {
             let numConds = 1;
-            // Diff Curve: Lvl 1-2 (1 cond), Lvl 3-6 (2 conds), Lvl 7-15 (3 conds), Lvl 16-20 (4 conds)
-            if (level >= 3 && level <= 6) numConds = 2;
-            else if (level >= 7 && level <= 15) numConds = 3;
-            else if (level >= 16) numConds = 4;
+            // Levels 1-2: 1 cond, Levels 3-17: 2 conds, Levels 18-20: 3 conds
+            if (level >= 3 && level <= 17) numConds = 2;
+            else if (level >= 18) numConds = 3;
             
             let allowNot = level >= 7;
             let attempts = 0;
 
             while(attempts < 1000) {
                 let expr = buildExpressionTree(numConds, allowNot);
+                
+                if (hasContradictionOrTautology(expr)) {
+                    attempts++;
+                    continue;
+                }
+
                 if (checkLogicExpression(targetBox.val, targetBox.color, expr)) {
                     let parts = expr.match(/x == '[^']+'|x [><] 50/g) || [];
                     let uniqueParts = new Set(parts);
@@ -430,17 +440,31 @@
             let logicString = generateRandomExpression(targetBox);
             boxes.push(targetBox);
 
-            // 3. Generate 3 Fake Boxes guaranteed to evaluate to False
+            // 3. Determine if we should force a distractor color (to make && conditions harder)
+            let forcedColor = null;
+            if (logicString.includes('&&')) {
+                let foundColors = logicColors.filter(c => logicString.includes(`'${c} square'`));
+                if (foundColors.length === 1) {
+                    forcedColor = foundColors[0];
+                }
+            }
+
+            // 4. Generate 3 Fake Boxes guaranteed to evaluate to False
             for (let i = 0; i < 3; i++) {
                 let fakeBox;
                 let failSafe = 0;
                 do {
                     fakeBox = {
                         val: Math.floor(Math.random() * maxNum) + 1,
-                        color: logicColors[Math.floor(Math.random() * logicColors.length)]
+                        color: forcedColor ? forcedColor : logicColors[Math.floor(Math.random() * logicColors.length)]
                     };
                     failSafe++;
                 } while (checkLogicExpression(fakeBox.val, fakeBox.color, logicString) && failSafe < 150);
+                
+                // Absolute fallback just in case the forced color somehow breaks the loop
+                if (checkLogicExpression(fakeBox.val, fakeBox.color, logicString)) {
+                    fakeBox.color = logicColors.find(c => c !== fakeBox.color);
+                }
                 
                 boxes.push(fakeBox);
             }
@@ -449,7 +473,6 @@
             boxes.sort(() => Math.random() - 0.5);
 
             variablesContainer.textContent = logicString;
-            // Adjust text size dynamically based on formula length
             variablesContainer.style.fontSize = logicString.length > 55 ? '0.85rem' : '1rem';
 
             // Apply to UI
@@ -646,8 +669,6 @@
             
             startLevel();
         }
-
-        // Initialization now waits for the intro screen to finish!
     </script>
 </body>
 </html>
