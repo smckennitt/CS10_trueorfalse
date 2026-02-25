@@ -231,6 +231,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 70px;
         }
 
         .game-over-container {
@@ -310,16 +311,9 @@
 
         <div class="cell answer-box" id="leftBox" onclick="attemptMove('left')"></div>
         <div class="cell center-box">
-            <div id="sprite">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="70" height="70">
-                    <path d="M 15 35 Q 50 5 85 35 Q 50 20 15 35 Z" fill="#e74c3c"/>
-                    <path d="M 45 25 L 55 25 L 55 40 L 45 40 Z" fill="#95a5a6"/>
-                    <path d="M 20 40 C 20 15 80 15 80 40 L 80 80 Q 80 90 70 95 L 70 65 L 60 65 L 60 80 L 40 80 L 40 65 L 30 65 L 30 95 Q 20 90 20 80 Z" fill="#f1c40f"/>
-                    <path d="M 30 65 L 40 65 L 40 80 L 35 85 L 30 95 Z" fill="#e67e22"/>
-                    <path d="M 70 65 L 60 65 L 60 80 L 65 85 L 70 95 Z" fill="#e67e22"/>
-                    <path d="M 40 65 L 60 65 L 50 85 Z" fill="#e67e22"/>
-                </svg>
-            </div>
+            
+            <div id="sprite">🤖</div>
+            
         </div>
         <div class="cell answer-box" id="rightBox" onclick="attemptMove('right')"></div>
 
@@ -337,7 +331,7 @@
     <div class="rules" id="rulesBlock">
         <h2>How to Play:</h2>
         <ul>
-            <li>You are the <strong>Spartan</strong> in the center.</li>
+            <li>You are the <strong>Robot</strong> in the center.</li>
             <li>Look at the variables (<strong>x</strong>, <strong>y</strong>).</li>
             <li>Only <strong>ONE</strong> of the surrounding expressions is <strong>True</strong>.</li>
             <li>Move to the correct square using <strong>Arrow Keys</strong>, <strong>W A S D</strong>, or clicking!</li>
@@ -354,7 +348,6 @@
         
         let highScore = localStorage.getItem('spriteLogicHighScore') || 0;
         
-        // Settings / Toggle Logic
         const shakeToggle = document.getElementById('shakeToggle');
         let shakeEnabled = localStorage.getItem('spriteLogicShake') !== 'false'; 
         shakeToggle.checked = shakeEnabled; 
