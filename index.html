@@ -84,7 +84,19 @@
         .victory-mode { animation: rainbow-bg 3s infinite linear !important; }
 
         .header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 400px; margin-bottom: 10px; font-size: 1.2rem; font-weight: bold; }
+        .left-header { display: flex; flex-direction: column; align-items: flex-start; }
         .scores-container { display: flex; flex-direction: column; align-items: flex-end; }
+
+        /* Pause Button */
+        .pause-btn {
+            background-color: var(--blue); color: white; border: none; padding: 4px 12px;
+            font-size: 0.85rem; border-radius: 5px; cursor: pointer; margin-top: 8px; font-weight: bold;
+            transition: background-color 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .pause-btn:hover { background-color: #2980b9; }
+        .pause-btn.paused { background-color: var(--green); animation: pulse-pause 1.5s infinite; }
+        .pause-btn.paused:hover { background-color: #27ae60; }
+        @keyframes pulse-pause { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
         /* Toggle Switch UI */
         .toggle-container { display: flex; align-items: center; margin-top: 8px; }
@@ -118,6 +130,7 @@
             max-width: 500px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             word-wrap: break-word;
+            transition: opacity 0.3s;
         }
 
         .mode-badge {
@@ -133,7 +146,9 @@
             display: grid; grid-template-columns: repeat(3, var(--cell-size));
             grid-template-rows: repeat(3, var(--cell-size)); gap: var(--cell-gap);
             margin-bottom: 30px; position: relative;
+            transition: opacity 0.3s, filter 0.3s;
         }
+        .grid-paused { opacity: 0.3; filter: blur(3px); pointer-events: none; }
 
         .cell {
             border-radius: 15px; display: flex; align-items: center; justify-content: center;
@@ -233,7 +248,10 @@
     </div>
 
     <div class="header">
-        <div id="levelDisplay">lv.1 / 20 <span class="mode-badge mode-easy" id="modeBadge">EASY</span></div>
+        <div class="left-header">
+            <div id="levelDisplay">lv.1 / 20 <span class="mode-badge mode-easy" id="modeBadge">EASY</span></div>
+            <button id="pauseBtn" class="pause-btn" onclick="togglePause()">Pause (P)</button>
+        </div>
         <div class="scores-container">
             <div id="scoreDisplay">0pt</div>
             <div class="toggle-container">
@@ -301,6 +319,7 @@
             <li>Levels 3-17: Two conditions. Watch out for tricky colors!</li>
             <li>Levels 18-20 (Extreme): Three conditions. Dense logic. Brace yourself.</li>
             <li><strong>Checkpoint:</strong> Reach Level 11, and you can respawn there if you fail!</li>
+            <li><strong>Pause:</strong> Press 'P' or click Pause to freeze the game.</li>
         </ul>
     </div>
 
@@ -325,7 +344,6 @@
             osc.type = type;
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
             
-            // Envelope to avoid clicking sounds
             gain.gain.setValueAtTime(vol, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
             
@@ -338,17 +356,26 @@
 
         let bgMusicInterval;
         let noteIndex = 0;
-        const melody = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; // C4, E4, G4, C5, G4, E4
+        // Lofi progression: Fmaj7 to Amin9 vibe. Slower, spaced out.
+        const melody = [174.61, 261.63, 329.63, 349.23, 220.00, 261.63, 329.63, 493.88]; 
 
         function startBgMusic() {
-            stopBgMusic(); // Clear any existing sequence
-            if (!musicEnabled) return;
+            stopBgMusic(); 
+            if (!musicEnabled || isPaused) return;
             
             bgMusicInterval = setInterval(() => {
-                if (!gameActive) return;
-                playTone(melody[noteIndex], 'sine', 0.15, 0.05);
+                if (!gameActive || isPaused) return;
+                
+                // Triangle wave for warmth, longer duration (1.2s) for a sustained, floaty feel
+                playTone(melody[noteIndex], 'triangle', 1.2, 0.04);
+                
+                // Drop a deep sine wave bass note every 4 beats to ground the chords
+                if (noteIndex % 4 === 0) {
+                    playTone(melody[noteIndex] / 2, 'sine', 2.0, 0.05); 
+                }
+
                 noteIndex = (noteIndex + 1) % melody.length;
-            }, 250); 
+            }, 600); // Slower tempo: 600ms between notes
         }
 
         function stopBgMusic() {
@@ -358,10 +385,10 @@
         function playWinSound() {
             if (!musicEnabled) return;
             initAudio();
-            setTimeout(() => playTone(523.25, 'square', 0.15, 0.1), 0);   // C5
-            setTimeout(() => playTone(659.25, 'square', 0.15, 0.1), 150); // E5
-            setTimeout(() => playTone(783.99, 'square', 0.15, 0.1), 300); // G5
-            setTimeout(() => playTone(1046.50, 'square', 0.4, 0.1), 450); // C6
+            setTimeout(() => playTone(523.25, 'square', 0.15, 0.1), 0);   
+            setTimeout(() => playTone(659.25, 'square', 0.15, 0.1), 150); 
+            setTimeout(() => playTone(783.99, 'square', 0.15, 0.1), 300); 
+            setTimeout(() => playTone(1046.50, 'square', 0.4, 0.1), 450); 
         }
 
         function playLoseSound() {
@@ -378,13 +405,14 @@
         let highestLevelReached = localStorage.getItem('spriteLogicCheckpoint') || 1;
         let isMoving = false; 
         let gameActive = false;
+        let isPaused = false;
         let currentTimerMax = 20;
         const MAX_LEVELS = 20;
 
         const logicColors = ['red', 'blue', 'green', 'yellow'];
         const colorHexMap = { 'red': '#ff7675', 'blue': '#74b9ff', 'green': '#55efc4', 'yellow': '#ffeaa7' };
         
-        // --- Toggles ---
+        // --- Toggles & Pause ---
         const musicToggle = document.getElementById('musicToggle');
         let musicEnabled = localStorage.getItem('spriteLogicMusic') !== 'false'; 
         musicToggle.checked = musicEnabled;
@@ -392,7 +420,7 @@
         function toggleMusic() {
             musicEnabled = musicToggle.checked;
             localStorage.setItem('spriteLogicMusic', musicEnabled);
-            if (musicEnabled && gameActive) {
+            if (musicEnabled && gameActive && !isPaused) {
                 initAudio();
                 startBgMusic();
             } else {
@@ -410,6 +438,36 @@
             if (!shakeEnabled) document.body.classList.remove('shake');
         }
         
+        const pauseBtn = document.getElementById('pauseBtn');
+        
+        function togglePause() {
+            // Prevent pausing if the game is over, hasn't started, or the robot is currently scanning an answer
+            if (!gameActive || isMoving) return; 
+            
+            isPaused = !isPaused;
+            if (isPaused) {
+                // Pause Game
+                pauseBtn.textContent = 'Resume (P)';
+                pauseBtn.classList.add('paused');
+                clearInterval(timerInterval);
+                stopBgMusic();
+                document.body.classList.remove('shake');
+                
+                // Dim the game so they can't study it while paused
+                gridContainer.classList.add('grid-paused');
+                variablesContainer.style.opacity = '0.3';
+            } else {
+                // Resume Game
+                pauseBtn.textContent = 'Pause (P)';
+                pauseBtn.classList.remove('paused');
+                gridContainer.classList.remove('grid-paused');
+                variablesContainer.style.opacity = '1';
+                
+                startTimerInterval(); 
+                if (musicEnabled) startBgMusic();
+            }
+        }
+
         let timerInterval;
         let timeLeft = 20; 
 
@@ -439,12 +497,17 @@
             }, 1800);
         };
 
-        // Initialize audio context on first user interaction to bypass browser autoplay rules
+        // Initialize audio context on first user interaction
         document.body.addEventListener('click', initAudio, { once: true });
         document.body.addEventListener('keydown', initAudio, { once: true });
 
         document.addEventListener('keydown', (e) => {
-            if (!gameActive || isMoving) return;
+            if (e.key.toLowerCase() === 'p') {
+                togglePause();
+                return;
+            }
+
+            if (!gameActive || isMoving || isPaused) return;
             
             // Ensure music starts if interaction was required
             if (musicEnabled && !bgMusicInterval) startBgMusic();
@@ -602,10 +665,9 @@
         // --- Movement & Evaluation ---
 
         function attemptMove(direction) {
-            if (!gameActive || isMoving) return;
+            if (!gameActive || isMoving || isPaused) return;
             isMoving = true;
 
-            // Ensure audio is initialized if they clicked instead of used keys
             initAudio();
             if (musicEnabled && !bgMusicInterval) startBgMusic();
 
@@ -665,10 +727,11 @@
             }
         }
 
-        // --- Animations & Audio State Changes ---
+        // --- Animations & Timer Execution ---
 
         function triggerDeathAnimation(reason) {
             gameActive = false;
+            pauseBtn.style.display = 'none'; // Hide pause button when dead
             clearInterval(timerInterval);
             document.body.classList.remove('shake', 'flash-success'); 
 
@@ -688,12 +751,8 @@
             setTimeout(() => gameOver(reason), 1200);
         }
 
-        function startTimer() {
-            clearInterval(timerInterval);
-            document.body.classList.remove('shake'); 
-            timeLeft = currentTimerMax;
-            timerBar.style.width = '100%';
-            
+        function startTimerInterval() {
+            clearInterval(timerInterval); // Prevent accidental duplicates
             timerInterval = setInterval(() => {
                 timeLeft -= 0.05; 
                 let percentage = (timeLeft / currentTimerMax) * 100;
@@ -707,6 +766,13 @@
                     triggerDeathAnimation("Time's Up!");
                 }
             }, 50);
+        }
+
+        function startTimer() {
+            document.body.classList.remove('shake'); 
+            timeLeft = currentTimerMax;
+            timerBar.style.width = '100%';
+            startTimerInterval();
         }
 
         function startLevel() {
@@ -767,6 +833,7 @@
 
         function showVictory() {
             gameActive = false;
+            pauseBtn.style.display = 'none'; // Hide pause button on win
             clearInterval(timerInterval);
             document.body.classList.remove('shake', 'flash-success', 'flash-error');
             document.body.classList.add('victory-mode');
@@ -787,6 +854,14 @@
             score = (startLv === 11) ? 100 : 0; 
             isMoving = false;
             gameActive = true;
+            
+            // Reset Pause State
+            isPaused = false;
+            pauseBtn.textContent = 'Pause (P)';
+            pauseBtn.classList.remove('paused');
+            pauseBtn.style.display = 'inline-block';
+            gridContainer.classList.remove('grid-paused');
+            variablesContainer.style.opacity = '1';
             
             clearInterval(timerInterval);
             document.body.className = ''; 
