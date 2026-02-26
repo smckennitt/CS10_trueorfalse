@@ -89,7 +89,8 @@
         /* Toggle Switch UI */
         .toggle-container { display: flex; align-items: center; margin-top: 8px; }
         .toggle-label { font-size: 0.75rem; color: var(--muted); margin-right: 6px; font-weight: normal; }
-        .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+        .switch { position: relative; display: inline-block; width: 34px; height: 20px; margin-right: 10px; }
+        .switch:last-child { margin-right: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
         .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; }
@@ -236,6 +237,12 @@
         <div class="scores-container">
             <div id="scoreDisplay">0pt</div>
             <div class="toggle-container">
+                <span class="toggle-label">Music</span>
+                <label class="switch">
+                    <input type="checkbox" id="musicToggle" onchange="toggleMusic()">
+                    <span class="slider round"></span>
+                </label>
+                
                 <span class="toggle-label">Shake</span>
                 <label class="switch">
                     <input type="checkbox" id="shakeToggle" onchange="toggleShake()">
@@ -298,6 +305,74 @@
     </div>
 
     <script>
+        // --- Native Web Audio API Synthesizer ---
+        let audioCtx;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTone(freq, type, duration, vol = 0.1) {
+            if (!audioCtx || !musicEnabled) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            // Envelope to avoid clicking sounds
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        let bgMusicInterval;
+        let noteIndex = 0;
+        const melody = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]; // C4, E4, G4, C5, G4, E4
+
+        function startBgMusic() {
+            stopBgMusic(); // Clear any existing sequence
+            if (!musicEnabled) return;
+            
+            bgMusicInterval = setInterval(() => {
+                if (!gameActive) return;
+                playTone(melody[noteIndex], 'sine', 0.15, 0.05);
+                noteIndex = (noteIndex + 1) % melody.length;
+            }, 250); 
+        }
+
+        function stopBgMusic() {
+            clearInterval(bgMusicInterval);
+        }
+
+        function playWinSound() {
+            if (!musicEnabled) return;
+            initAudio();
+            setTimeout(() => playTone(523.25, 'square', 0.15, 0.1), 0);   // C5
+            setTimeout(() => playTone(659.25, 'square', 0.15, 0.1), 150); // E5
+            setTimeout(() => playTone(783.99, 'square', 0.15, 0.1), 300); // G5
+            setTimeout(() => playTone(1046.50, 'square', 0.4, 0.1), 450); // C6
+        }
+
+        function playLoseSound() {
+            if (!musicEnabled) return;
+            initAudio();
+            setTimeout(() => playTone(300, 'sawtooth', 0.25, 0.15), 0);
+            setTimeout(() => playTone(280, 'sawtooth', 0.25, 0.15), 250);
+            setTimeout(() => playTone(250, 'sawtooth', 0.6, 0.15), 500);
+        }
+
+        // --- Game State Variables ---
         let level = 1;
         let score = 0;
         let highestLevelReached = localStorage.getItem('spriteLogicCheckpoint') || 1;
@@ -309,6 +384,22 @@
         const logicColors = ['red', 'blue', 'green', 'yellow'];
         const colorHexMap = { 'red': '#ff7675', 'blue': '#74b9ff', 'green': '#55efc4', 'yellow': '#ffeaa7' };
         
+        // --- Toggles ---
+        const musicToggle = document.getElementById('musicToggle');
+        let musicEnabled = localStorage.getItem('spriteLogicMusic') !== 'false'; 
+        musicToggle.checked = musicEnabled;
+
+        function toggleMusic() {
+            musicEnabled = musicToggle.checked;
+            localStorage.setItem('spriteLogicMusic', musicEnabled);
+            if (musicEnabled && gameActive) {
+                initAudio();
+                startBgMusic();
+            } else {
+                stopBgMusic();
+            }
+        }
+
         const shakeToggle = document.getElementById('shakeToggle');
         let shakeEnabled = localStorage.getItem('spriteLogicShake') !== 'false'; 
         shakeToggle.checked = shakeEnabled; 
@@ -348,8 +439,16 @@
             }, 1800);
         };
 
+        // Initialize audio context on first user interaction to bypass browser autoplay rules
+        document.body.addEventListener('click', initAudio, { once: true });
+        document.body.addEventListener('keydown', initAudio, { once: true });
+
         document.addEventListener('keydown', (e) => {
             if (!gameActive || isMoving) return;
+            
+            // Ensure music starts if interaction was required
+            if (musicEnabled && !bgMusicInterval) startBgMusic();
+
             if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') attemptMove('up');
             if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') attemptMove('down');
             if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') attemptMove('left');
@@ -379,11 +478,9 @@
             try { return eval(expr); } catch (e) { return false; }
         }
 
-        // Prevents generating tautologies or contradictions
         function hasContradictionOrTautology(expr) {
             if (expr.includes("'even'") && expr.includes("'odd'")) return true;
             if (expr.includes("> 50") && expr.includes("< 50")) return true;
-            // Impossible combinations like red && blue
             let colorsInExpr = logicColors.filter(c => expr.includes(`'${c} square'`));
             if (colorsInExpr.length > 1 && expr.includes("&&")) return true;
             return false;
@@ -391,8 +488,6 @@
 
         function buildExpressionTree(numConds, allowNot) {
             const maybeNot = (exp) => (allowNot && Math.random() > 0.6) ? `!(${exp})` : exp;
-            
-            // Bias heavily towards && operators 
             const op = () => Math.random() > 0.25 ? '&&' : '||';
 
             if (numConds === 1) {
@@ -410,7 +505,6 @@
 
         function generateRandomExpression(targetBox) {
             let numConds = 1;
-            // Levels 1-2: 1 cond, Levels 3-17: 2 conds, Levels 18-20: 3 conds
             if (level >= 3 && level <= 17) numConds = 2;
             else if (level >= 18) numConds = 3;
             
@@ -436,7 +530,6 @@
         }
 
         function generateLevelLogic() {
-            // Setup Mode UI
             if (level <= 10) {
                 modeBadge.textContent = "EASY";
                 modeBadge.className = "mode-badge mode-easy";
@@ -454,17 +547,14 @@
             let maxNum = level <= 10 ? 20 : 99;
             let boxes = [];
             
-            // 1. Generate Target Box
             let targetBox = {
                 val: Math.floor(Math.random() * maxNum) + 1,
                 color: logicColors[Math.floor(Math.random() * logicColors.length)]
             };
             
-            // 2. Build Complex Expression for Target Box
             let logicString = generateRandomExpression(targetBox);
             boxes.push(targetBox);
 
-            // 3. Determine if we should force a distractor color (to make && conditions harder)
             let forcedColor = null;
             if (logicString.includes('&&')) {
                 let foundColors = logicColors.filter(c => logicString.includes(`'${c} square'`));
@@ -473,7 +563,6 @@
                 }
             }
 
-            // 4. Generate 3 Fake Boxes guaranteed to evaluate to False
             for (let i = 0; i < 3; i++) {
                 let fakeBox;
                 let failSafe = 0;
@@ -485,7 +574,6 @@
                     failSafe++;
                 } while (checkLogicExpression(fakeBox.val, fakeBox.color, logicString) && failSafe < 150);
                 
-                // Absolute fallback just in case the forced color somehow breaks the loop
                 if (checkLogicExpression(fakeBox.val, fakeBox.color, logicString)) {
                     fakeBox.color = logicColors.find(c => c !== fakeBox.color);
                 }
@@ -493,13 +581,11 @@
                 boxes.push(fakeBox);
             }
 
-            // Shuffle them
             boxes.sort(() => Math.random() - 0.5);
 
             variablesContainer.textContent = logicString;
             variablesContainer.style.fontSize = logicString.length > 55 ? '0.85rem' : '1rem';
 
-            // Apply to UI
             const dirs = ['up', 'left', 'right', 'down'];
             for (let i = 0; i < 4; i++) {
                 let domBox = document.getElementById(dirs[i] + 'Box');
@@ -507,7 +593,6 @@
                 domBox.style.backgroundColor = colorHexMap[boxes[i].color];
                 domBox.dataset.color = boxes[i].color;
                 
-                // Reset any styling applied from previous game over
                 domBox.style.opacity = '1';
                 domBox.style.transform = '';
                 domBox.classList.remove('highlight-correct');
@@ -519,6 +604,11 @@
         function attemptMove(direction) {
             if (!gameActive || isMoving) return;
             isMoving = true;
+
+            // Ensure audio is initialized if they clicked instead of used keys
+            initAudio();
+            if (musicEnabled && !bgMusicInterval) startBgMusic();
+
             document.body.classList.remove('shake');
             clearInterval(timerInterval); 
 
@@ -575,12 +665,15 @@
             }
         }
 
-        // --- Animations & State Changes ---
+        // --- Animations & Audio State Changes ---
 
         function triggerDeathAnimation(reason) {
             gameActive = false;
             clearInterval(timerInterval);
             document.body.classList.remove('shake', 'flash-success'); 
+
+            stopBgMusic();
+            playLoseSound();
 
             const animations = ['explode', 'deflate', 'slice'];
             const choice = animations[Math.floor(Math.random() * animations.length)];
@@ -628,11 +721,9 @@
             document.body.classList.add('flash-error');
             setTimeout(() => document.body.classList.remove('flash-error'), 800);
 
-            // Hide rules, but keep grid and variables visible
             rulesBlock.style.display = 'none';
             gameOverContainer.style.display = 'flex';
             
-            // Highlight Correct Answer & Dim Incorrect ones
             const dirs = ['up', 'left', 'right', 'down'];
             const logicString = variablesContainer.textContent;
             
@@ -680,6 +771,9 @@
             document.body.classList.remove('shake', 'flash-success', 'flash-error');
             document.body.classList.add('victory-mode');
 
+            stopBgMusic();
+            playWinSound();
+
             gridContainer.style.display = 'none';
             variablesContainer.style.display = 'none';
             rulesBlock.style.display = 'none';
@@ -697,6 +791,7 @@
             clearInterval(timerInterval);
             document.body.className = ''; 
             if (shakeEnabled) shakeToggle.checked = true;
+            if (musicEnabled) musicToggle.checked = true;
             
             document.querySelectorAll('.confetti-piece').forEach(e => e.remove());
 
@@ -711,6 +806,10 @@
             rulesBlock.style.display = 'block';
             gameOverContainer.style.display = 'none';
             victoryContainer.style.display = 'none';
+
+            if (musicEnabled && audioCtx) {
+                startBgMusic();
+            }
             
             startLevel();
         }
