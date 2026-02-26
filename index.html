@@ -83,17 +83,18 @@
         }
         .victory-mode { animation: rainbow-bg 3s infinite linear !important; }
 
-        .header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 400px; margin-bottom: 10px; font-size: 1.2rem; font-weight: bold; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; max-width: 450px; margin-bottom: 10px; font-size: 1.2rem; font-weight: bold; }
         .left-header { display: flex; flex-direction: column; align-items: flex-start; }
         .scores-container { display: flex; flex-direction: column; align-items: flex-end; }
 
-        /* Pause Button */
-        .pause-btn {
+        /* Buttons */
+        .ui-btn {
             background-color: var(--blue); color: white; border: none; padding: 4px 12px;
-            font-size: 0.85rem; border-radius: 5px; cursor: pointer; margin-top: 8px; font-weight: bold;
+            font-size: 0.85rem; border-radius: 5px; cursor: pointer; font-weight: bold;
             transition: background-color 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .pause-btn:hover { background-color: #2980b9; }
+        .ui-btn:hover { background-color: #2980b9; }
+        .pause-btn { margin-top: 8px; }
         .pause-btn.paused { background-color: var(--green); animation: pulse-pause 1.5s infinite; }
         .pause-btn.paused:hover { background-color: #27ae60; }
         @keyframes pulse-pause { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
@@ -111,7 +112,7 @@
         .slider.round { border-radius: 20px; }
         .slider.round:before { border-radius: 50%; }
 
-        .timer-container { width: 100%; max-width: 400px; height: 10px; background-color: #dfe4ea; border-radius: 5px; margin-bottom: 20px; overflow: hidden; }
+        .timer-container { width: 100%; max-width: 450px; height: 10px; background-color: #dfe4ea; border-radius: 5px; margin-bottom: 20px; overflow: hidden; }
         .timer-bar { height: 100%; width: 100%; background-color: var(--red); transition: width 0.05s linear; }
 
         h1 { margin: 0; font-size: 2rem; text-align: center; margin-bottom: 5px; }
@@ -250,7 +251,7 @@
     <div class="header">
         <div class="left-header">
             <div id="levelDisplay">lv.1 / 20 <span class="mode-badge mode-easy" id="modeBadge">EASY</span></div>
-            <button id="pauseBtn" class="pause-btn" onclick="togglePause()">Pause (P)</button>
+            <button id="pauseBtn" class="ui-btn pause-btn" onclick="togglePause()">Pause (P)</button>
         </div>
         <div class="scores-container">
             <div id="scoreDisplay">0pt</div>
@@ -266,6 +267,10 @@
                     <input type="checkbox" id="shakeToggle" onchange="toggleShake()">
                     <span class="slider round"></span>
                 </label>
+            </div>
+            <div style="display: flex; align-items: center; margin-top: 8px; justify-content: flex-end; width: 100%;">
+                <span id="trackDisplay" class="toggle-label" style="margin-right: 8px; max-width: 120px; text-align: right; overflow: hidden; white-space: nowrap;">🎵 Lo-Fi Friday</span>
+                <button class="ui-btn" style="margin-top: 0; padding: 2px 8px; font-size: 0.7rem;" onclick="nextSong()">Next ⏭</button>
             </div>
         </div>
     </div>
@@ -324,7 +329,7 @@
     </div>
 
     <script>
-        // --- Native Web Audio API Synthesizer ---
+        // --- Native Web Audio API Synthesizer & Jukebox ---
         let audioCtx;
         
         function initAudio() {
@@ -354,32 +359,59 @@
             osc.stop(audioCtx.currentTime + duration);
         }
 
+        // The 10 Track Jukebox
+        const tracks = [
+            { name: "Lo-Fi Friday", type: "triangle", tempo: 600, notes: [174.61, 261.63, 329.63, 349.23, 220.00, 261.63, 329.63, 493.88], bass: true },
+            { name: "Upbeat Arcade", type: "square", tempo: 150, notes: [261.63, 329.63, 392.00, 523.25, 392.00, 329.63], bass: false },
+            { name: "Hero's Quest", type: "square", tempo: 300, notes: [392.00, 392.00, 523.25, 587.33, 659.25, 698.46, 783.99], bass: true }, // Zelda vibe
+            { name: "Survival Horror", type: "sawtooth", tempo: 800, notes: [65.41, 69.30, 92.50, 98.00], bass: true }, // Creepy, slow, dissonant
+            { name: "Puzzle Cube", type: "sine", tempo: 400, notes: [523.25, 587.33, 659.25, 783.99, 880.00], bass: false }, // Fez ambient pentatonic
+            { name: "Cyberpunk", type: "sawtooth", tempo: 180, notes: [220.00, 220.00, 261.63, 220.00, 293.66, 220.00, 329.63, 293.66], bass: true }, 
+            { name: "8-Bit Bossa", type: "square", tempo: 350, notes: [261.63, 392.00, 329.63, 261.63, 349.23, 392.00, 329.63], bass: true },
+            { name: "Mystic Cave", type: "triangle", tempo: 500, notes: [293.66, 349.23, 392.00, 440.00, 523.25, 440.00], bass: false }, 
+            { name: "Boss Battle", type: "sawtooth", tempo: 120, notes: [196.00, 207.65, 233.08, 246.94, 277.18, 293.66], bass: true }, 
+            { name: "Neon Chill", type: "sine", tempo: 550, notes: [277.18, 329.63, 415.30, 493.88, 329.63], bass: true } 
+        ];
+
         let bgMusicInterval;
         let noteIndex = 0;
-        // Lofi progression: Fmaj7 to Amin9 vibe. Slower, spaced out.
-        const melody = [174.61, 261.63, 329.63, 349.23, 220.00, 261.63, 329.63, 493.88]; 
+        let currentTrackIndex = 0;
 
         function startBgMusic() {
             stopBgMusic(); 
             if (!musicEnabled || isPaused) return;
             
+            const track = tracks[currentTrackIndex];
+            document.getElementById('trackDisplay').textContent = "🎵 " + track.name;
+            
             bgMusicInterval = setInterval(() => {
                 if (!gameActive || isPaused) return;
                 
-                // Triangle wave for warmth, longer duration (1.2s) for a sustained, floaty feel
-                playTone(melody[noteIndex], 'triangle', 1.2, 0.04);
+                playTone(track.notes[noteIndex], track.type, (track.tempo / 1000) * 1.5, 0.04);
                 
-                // Drop a deep sine wave bass note every 4 beats to ground the chords
-                if (noteIndex % 4 === 0) {
-                    playTone(melody[noteIndex] / 2, 'sine', 2.0, 0.05); 
+                if (track.bass && noteIndex % 4 === 0) {
+                    playTone(track.notes[noteIndex] / 2, 'sine', (track.tempo / 1000) * 2.5, 0.05); 
                 }
 
-                noteIndex = (noteIndex + 1) % melody.length;
-            }, 600); // Slower tempo: 600ms between notes
+                noteIndex = (noteIndex + 1) % track.notes.length;
+            }, track.tempo); 
         }
 
         function stopBgMusic() {
             clearInterval(bgMusicInterval);
+        }
+
+        function nextSong() {
+            currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
+            noteIndex = 0; // Reset to beat 1 for the new track
+            
+            if (musicEnabled) {
+                initAudio();
+                document.getElementById('trackDisplay').textContent = "🎵 " + tracks[currentTrackIndex].name;
+                if (gameActive && !isPaused) {
+                    startBgMusic();
+                }
+            }
         }
 
         function playWinSound() {
@@ -441,23 +473,19 @@
         const pauseBtn = document.getElementById('pauseBtn');
         
         function togglePause() {
-            // Prevent pausing if the game is over, hasn't started, or the robot is currently scanning an answer
             if (!gameActive || isMoving) return; 
             
             isPaused = !isPaused;
             if (isPaused) {
-                // Pause Game
                 pauseBtn.textContent = 'Resume (P)';
                 pauseBtn.classList.add('paused');
                 clearInterval(timerInterval);
                 stopBgMusic();
                 document.body.classList.remove('shake');
                 
-                // Dim the game so they can't study it while paused
                 gridContainer.classList.add('grid-paused');
                 variablesContainer.style.opacity = '0.3';
             } else {
-                // Resume Game
                 pauseBtn.textContent = 'Pause (P)';
                 pauseBtn.classList.remove('paused');
                 gridContainer.classList.remove('grid-paused');
@@ -488,6 +516,7 @@
 
         // Initial Loading Sequence
         window.onload = () => {
+            document.getElementById('trackDisplay').textContent = "🎵 " + tracks[currentTrackIndex].name;
             setTimeout(() => {
                 introScreen.style.opacity = '0';
                 setTimeout(() => {
@@ -509,7 +538,6 @@
 
             if (!gameActive || isMoving || isPaused) return;
             
-            // Ensure music starts if interaction was required
             if (musicEnabled && !bgMusicInterval) startBgMusic();
 
             if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') attemptMove('up');
@@ -542,6 +570,7 @@
         }
 
         function hasContradictionOrTautology(expr) {
+            // Guardrail to prevent true-for-all tautologies like x=='odd' || x=='even'
             if (expr.includes("'even'") && expr.includes("'odd'")) return true;
             if (expr.includes("> 50") && expr.includes("< 50")) return true;
             let colorsInExpr = logicColors.filter(c => expr.includes(`'${c} square'`));
@@ -731,7 +760,7 @@
 
         function triggerDeathAnimation(reason) {
             gameActive = false;
-            pauseBtn.style.display = 'none'; // Hide pause button when dead
+            pauseBtn.style.display = 'none'; 
             clearInterval(timerInterval);
             document.body.classList.remove('shake', 'flash-success'); 
 
@@ -752,7 +781,7 @@
         }
 
         function startTimerInterval() {
-            clearInterval(timerInterval); // Prevent accidental duplicates
+            clearInterval(timerInterval); 
             timerInterval = setInterval(() => {
                 timeLeft -= 0.05; 
                 let percentage = (timeLeft / currentTimerMax) * 100;
@@ -833,7 +862,7 @@
 
         function showVictory() {
             gameActive = false;
-            pauseBtn.style.display = 'none'; // Hide pause button on win
+            pauseBtn.style.display = 'none'; 
             clearInterval(timerInterval);
             document.body.classList.remove('shake', 'flash-success', 'flash-error');
             document.body.classList.add('victory-mode');
@@ -855,7 +884,6 @@
             isMoving = false;
             gameActive = true;
             
-            // Reset Pause State
             isPaused = false;
             pauseBtn.textContent = 'Pause (P)';
             pauseBtn.classList.remove('paused');
